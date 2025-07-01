@@ -10,13 +10,11 @@ This project uploads CSV data files to a MySQL database. It reads configuration 
 │ └── config.yaml # YAML config with MySQL credentials and data file info
 ├── credentials/
 │ └── gcs_credentials.json # Credentials for Google Cloud Storage (if used)
-├── data/ # Data files (CSV / TXT) to upload
-├── logs/ # Log files
 ├── src/ # Source code for uploader and utilities
 ├── main.py # Entry point script
 ├── requirements.txt # Python dependencies
 ├── .gitignore # Git ignore rules
-└── Readme.md # This file
+└── README.md # This file
 
 
 
