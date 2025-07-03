@@ -1,22 +1,28 @@
 # US Campaign FEC Data Uploader
 
-This project uploads CSV data files to a MySQL database. It reads configuration from a YAML file, processes multiple input files, and inserts data into MySQL tables.
+This project uploads FEC data files to **MySQL database** and **Google Cloud Storage (GCS)** based on a YAML configuration. It supports bulk ingestion, and initial data cleaning via a Jupyter notebook.
 
 ---
 
 ## Project Structure
 
+``` bash
 ├── config/
-│ └── config.yaml # YAML config with MySQL credentials and data file info
+│   └── config.yaml                # YAML config with MySQL, GCS info and file mapping
 ├── credentials/
-│ └── gcs_credentials.json # Credentials for Google Cloud Storage (if used)
-├── src/ # Source code for uploader and utilities
-├── main.py # Entry point script
-├── requirements.txt # Python dependencies
-├── .gitignore # Git ignore rules
-└── README.md # This file
+│   └── gcs_credentials.json       # GCS service account key
+├── notebooks/
+│   └── data_cleaning_us_campaign.ipynb  # [ADDED] Data cleaning logic for selected datasets
+├── src/
+│   ├── filessio_uploader.py       # MySQL uploader logic
+│   ├── gcs_uploader.py            # [ADDED] GCS uploader logic
+│   └── init.py
+├── main.py                        # Pipeline orchestrator script
+├── requirements.txt               # Python dependencies
+├── .gitignore
+└── README.md
 
-
+```
 
 ---
 
@@ -32,10 +38,10 @@ This project uploads CSV data files to a MySQL database. It reads configuration 
 2. **Install dependencies:**
 
     ```bash
-    pip install -r requirements.txt
+    uv pip install -r requirements.txt
     ```
 
-3. **Configure your MySQL connection and data file paths in `config/config.yaml`:**
+3. **Configure MySQL and GCS settings in `config/config.yaml`:**
 
     ```yaml
     mysql:
@@ -45,6 +51,11 @@ This project uploads CSV data files to a MySQL database. It reads configuration 
       password: your_password
       database: your_database
 
+    gcs:
+      bucket: your_bucket_name
+      upload_folder: bronze-layer
+      credentials_file: credentials/gcs_credentials.json
+
     fec_data_files:
       - file: "data/ccl.txt"
         table_name: "candidate_committee_linkage"
@@ -53,28 +64,49 @@ This project uploads CSV data files to a MySQL database. It reads configuration 
           - "CAND_ELECTION_YR"
           - "FEC_ELECTION_YR"
           - "CMTE_ID"
-          - "CMTE-TP"
+          - "CMTE_TP"
           - "CMTE_DSGN"
           - "LINKAGE_ID"
-      # Add other data files similarly
+      - file: "data/cm.txt"
+        gcs_folder: "committee-master"
+      # ...
     ```
 
 ---
 
 ## Usage
 
-Run the main script:
+Run the main pipeline:
 
 ```bash
 python main.py
 ```
 
 This will:
+- Upload files defined with columns to MySQL
+- Upload files without columns to GCS
+- Read paths, database credentials, and GCS settings from config.yaml
 
-Read the CSV/TXT files defined in the config.
-Create corresponding tables (dropping existing ones if present).
-Insert the data into your MySQL database.
+---
 
+## Data Cleaning [ADDED]
+
+A notebook is provided to clean FEC datasets:
+
+📍 notebooks/data_cleaning_us_campaign.ipynb
+
+Currently implemented:
+- weball20.txt – All Candidates Summary
+- cn.txt – Candidate Master File
+
+Cleaning includes:
+- Handling missing values
+- Data type casting
+- Enriched the data
+- Removing invalid records
+- Saving cleaned DataFrame to Silver Layer on GCS Bucket
+
+---
 
 ## Notes
 
@@ -82,6 +114,8 @@ Insert the data into your MySQL database.
 - The columns specified in the config must exactly match the columns in your data files.
 - Data files are expected to be pipe (|) separated and do not include headers; columns are assigned from the config file.
 - Column names with special characters (like hyphens -) are handled with backticks in SQL queries.
+
+---
 
 ## FEC Data File Abbreviations (2019–2020 Cycle)
 
@@ -109,16 +143,16 @@ You can find the original Federal Election Commission bulk data files at:
 
 This project uses files from that source for the 2019–2020 election cycle.
 
+--- 
 
 ## Troubleshooting
+- Column mismatch: Check that config column count matches actual data for MySQL data upload.
+- MySQL errors: Make sure column names are backtick-quoted and not using reserved keywords.
+- GCS auth issues: Confirm that the service account JSON key is valid and bucket exists.
+- Wildcard issues: Ensure the path in fec_data_files is correct (e.g., *.txt instead of .csv).
 
-- Column mismatch errors?
-Verify the number of columns in your data files matches your config.
-- MySQL syntax errors?
-Confirm column names are properly quoted (backticks) and do not conflict with reserved keywords.
-- Connection issues?
-Ensure MySQL server is running, accessible, and credentials are correct.
+--- 
 
 ## Contributing & Support
-
-Feel free to submit issues or pull requests for improvements!
+- Open issues for bugs or improvement ideas
+- Pull requests are welcome!
